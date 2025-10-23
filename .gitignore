@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# PyTorch models and checkpoints
+*.pth
+*.pt
+checkpoints/
+models/
+
+# Jupyter
+.ipynb_checkpoints
+
+# Output files
+outputs/
+results/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# HuggingFace cache
+.cache/
+transformers_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
