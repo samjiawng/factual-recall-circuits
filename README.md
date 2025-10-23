@@ -1,71 +1,77 @@
 # Factual Recall Circuits in Gemma 2B
 
-This project implements a mechanistic interpretability pipeline for discovering circuits responsible for factual recall in the Gemma 2B language model using Neuropedia-style attribution graphs and sparse autoencoders.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+A mechanistic interpretability toolkit for discovering and analyzing circuits responsible for factual recall in large language models. This implementation uses Neuropedia-style attribution graphs and sparse autoencoders to identify interpretable computational subgraphs that encode factual knowledge.
+
+See also our companion [documentation](docs/README.md).
 
 ## Overview
 
-The project discovers 18+ circuits that encode different types of factual knowledge:
-- Entity-location relationships (e.g., "The Eiffel Tower is in Paris")
-- Capital-country relationships (e.g., "Paris is the capital of France")
-- Historical dates (e.g., "WWII ended in 1945")
-- Person-occupation relationships (e.g., "Einstein was a physicist")
+This project implements methods for:
+- Discovering interpretable circuits in transformer language models
+- Attribution analysis using integrated gradients and activation patching
+- Sparse autoencoder training for feature extraction
+- Automated hypothesis testing and validation
+- Circuit visualization and analysis
 
-## Features
+The toolkit has been used to discover 18+ distinct circuits for different types of factual knowledge including entity-location relationships, capital cities, historical dates, and person-occupation associations.
 
-### 1. Circuit Discovery
-- **Neuropedia Attribution Graphs**: Uses integrated gradients and activation patching to identify important model components
-- **Sparse Autoencoders (SAEs)**: Extracts interpretable features from neural network activations
-- **Automatic Circuit Extraction**: Finds connected components of features that work together for factual recall
+## Getting Started
 
-### 2. Automated Testing Pipeline
-- **Hypothesis Generation**: Automatically creates testable hypotheses about circuit features
-- **Validation Framework**: Tests hypotheses using precision and specificity metrics
-- **Faithfulness Testing**: Verifies that discovered circuits are necessary and sufficient
+### Installation
 
-### 3. Visualization & Analysis
-- Circuit graph visualizations
-- Attribution heatmaps
-- Feature activation distributions
-- Testing result dashboards
-- Circuit overlap analysis
+#### Standard Installation
 
-## Installation
+This project requires Python 3.11+ and PyTorch (>= 2.0). To install the latest stable version, run:
 
 ```bash
-# Clone or download this repository
-cd factual-recall-circuits
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Note: Requires CUDA-capable GPU for reasonable performance
-# CPU execution is supported but will be very slow
+pip install torch transformers accelerate
+pip install numpy pandas matplotlib seaborn scikit-learn einops tqdm networkx
 ```
 
-## Requirements
+#### Developer Installation
 
-- Python 3.8+
-- PyTorch 2.0+
-- Transformers (HuggingFace)
-- CUDA-capable GPU (recommended)
-- ~10GB GPU memory for Gemma 2B
+If you are interested in modifying the library, clone the repository and set up a development environment as follows:
 
-## Quick Start
+```bash
+git clone https://github.com/yourusername/factual-recall-circuits.git
+cd factual-recall-circuits
+python3.11 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-### Basic Usage
+### Authentication
+
+Access to Gemma models requires HuggingFace authentication:
+
+```bash
+huggingface-cli login
+```
+
+Visit https://huggingface.co/google/gemma-2b to request access to the model.
+
+### Basic Example
+
+As a starting point, here is a minimal example of discovering circuits for factual recall:
 
 ```python
 from circuit_discovery import CircuitDiscovery
 
-# Initialize
-discovery = CircuitDiscovery(device='cuda')
+# Initialize discovery system
+discovery = CircuitDiscovery(model_name="google/gemma-2b", device='cuda')
 
 # Define factual prompts
 dataset = {
     'entity_location': [
-        {'clean': 'The Eiffel Tower is in Paris', 
-         'corrupted': 'The Eiffel Tower is in London'},
-        # ... more examples
+        {'clean': 'The Eiffel Tower is located in Paris',
+         'corrupted': 'The Eiffel Tower is located in London'},
+        {'clean': 'Mount Everest is in the Himalayas',
+         'corrupted': 'Mount Everest is in the Alps'},
     ]
 }
 
@@ -74,228 +80,136 @@ circuits = discovery.discover_all_circuits(dataset, train_sae=True)
 
 # Analyze results
 for circuit in circuits:
-    print(f"{circuit.name}: {len(circuit.nodes)} nodes")
+    print(f"Circuit: {circuit.name}")
+    print(f"  Nodes: {len(circuit.nodes)}")
+    print(f"  Attribution score: {circuit.attribution_score:.4f}")
 ```
 
-### Run Complete Pipeline
+For a complete walkthrough, see the [tutorial notebook](examples/tutorial.ipynb).
+
+## Running the Full Pipeline
+
+To run the complete circuit discovery and validation pipeline:
 
 ```bash
-# Run the full discovery and testing pipeline
 python main.py
 ```
 
-This will:
-1. Load Gemma 2B model
-2. Train sparse autoencoders
-3. Discover circuits for different fact types
-4. Validate circuits with automated tests
-5. Generate visualizations and reports
-6. Export all results to `/mnt/user-data/outputs/`
+Results are saved to `outputs/circuit_discovery_YYYYMMDD_HHMMSS/` and include:
+- Circuit visualizations (PNG)
+- Detailed analysis reports (Markdown, JSON)
+- Hypothesis testing results (CSV)
+- Validation metrics and statistics
 
 ## Project Structure
 
 ```
-├── circuit_discovery.py      # Core circuit discovery algorithms
-├── testing_pipeline.py        # Automated testing framework
-├── utils.py                   # Visualization and analysis utilities
-├── main.py                    # Example pipeline implementation
-├── requirements.txt           # Python dependencies
-└── README.md                  # This file
+factual-recall-circuits/
+├── src/
+│   ├── circuit_discovery.py      # Core discovery algorithms
+│   ├── testing_pipeline.py       # Validation framework
+│   └── utils.py                  # Visualization and analysis
+├── docs/                         # Documentation
+├── examples/                     # Tutorial notebooks
+├── main.py                       # Full pipeline implementation
+└── requirements.txt              # Dependencies
 ```
-
-## Architecture
-
-### CircuitDiscovery
-Main class for discovering circuits. Key methods:
-- `train_sparse_autoencoder()` - Train SAE on layer activations
-- `discover_circuit()` - Find circuit for specific fact type
-- `discover_all_circuits()` - Batch discovery for multiple fact types
-
-### NeuropediaAttributionGraph
-Implements attribution methods:
-- `integrated_gradients()` - Compute attribution scores
-- `activation_patching()` - Measure component importance
-
-### CircuitTester
-Validates discovered circuits:
-- `test_hypothesis()` - Test individual feature hypotheses
-- `test_circuit_faithfulness()` - Verify circuit necessity/sufficiency
-- `run_full_validation()` - Complete testing pipeline
 
 ## Methodology
 
-### 1. Attribution Analysis
-- Use integrated gradients to identify important activations
-- Apply activation patching to measure causal importance
-- Focus on components that change factual predictions
+### Attribution Analysis
 
-### 2. Sparse Autoencoding
-- Train SAEs on model activations (expansion factor of 4x)
-- L1 sparsity penalty encourages interpretable features
-- Extract features that correspond to factual knowledge
+The toolkit implements two primary attribution methods:
 
-### 3. Circuit Extraction
-- Connect features across layers based on attribution scores
-- Build directed graph of feature dependencies
-- Identify circuits responsible for specific fact types
+**Integrated Gradients**: Computes feature importance by integrating gradients along the path from a baseline to the actual input.
 
-### 4. Validation
-- Generate hypotheses about feature behavior
-- Test on positive and negative examples
-- Measure precision (% test cases activating) and specificity (% controls not activating)
-- Verify faithfulness through ablation studies
+**Activation Patching**: Measures causal importance by replacing activations and observing the effect on model outputs.
 
-## Example Output
+### Sparse Autoencoders
 
-After running `main.py`, you'll get:
+Sparse autoencoders are trained on layer activations to extract interpretable features:
+- Expansion factor of 4x over hidden dimension
+- L1 sparsity penalty for feature interpretability
+- Layer-specific training for optimal feature extraction
 
-```
-Discovered 4 circuits for factual recall in Gemma 2B:
-  • entity_location_circuit: 12 nodes, attribution score = 0.234
-  • capital_country_circuit: 15 nodes, attribution score = 0.198
-  • historical_date_circuit: 10 nodes, attribution score = 0.167
-  • person_occupation_circuit: 8 nodes, attribution score = 0.145
-```
+### Circuit Discovery
 
-### Generated Files
-- `circuit_summary.txt` - Detailed circuit descriptions
-- `circuits.json` - Machine-readable circuit data
-- `*.png` - Visualizations
-- `*_results.csv` - Testing results
-- `REPORT.md` - Complete analysis report
+Circuits are identified through:
+1. Attribution scoring across model layers
+2. Feature extraction via sparse autoencoders
+3. Node importance ranking
+4. Edge construction between layers
+5. Circuit validation and faithfulness testing
 
-## Customization
+## Supported Models
 
-### Add New Fact Types
+Currently tested with:
+- Gemma 2B
+- GPT-2 (all variants)
 
-```python
-custom_dataset = {
-    'your_fact_type': [
-        {'clean': 'correct fact statement',
-         'corrupted': 'incorrect version'},
-        # ... more examples
-    ]
-}
+The architecture is designed to be model-agnostic and can be adapted to other transformer-based language models.
 
-circuits = discovery.discover_all_circuits(custom_dataset)
-```
+## Advanced Examples
 
-### Custom Hypotheses
+Additional examples are available in the `examples/` directory:
+- [Interactive Tutorial](examples/tutorial.ipynb) - Step-by-step walkthrough
+- Custom fact types and hypothesis testing
+- Visualization and analysis techniques
 
-```python
-from testing_pipeline import FeatureHypothesis
+## Documentation
 
-hypothesis = FeatureHypothesis(
-    feature_id=(layer, feature_idx),
-    hypothesis="Description of what feature detects",
-    test_prompts=["examples", "that should", "activate"],
-    control_prompts=["examples", "that shouldn't", "activate"],
-    expected_activation_threshold=0.5
-)
+Please check out our [documentation](docs/README.md) and don't hesitate to raise issues or contribute if anything is unclear.
 
-result = tester.validator.test_hypothesis(hypothesis)
-```
-
-### Adjust SAE Parameters
-
-```python
-# In circuit_discovery.py, modify SparseAutoencoder
-sae = SparseAutoencoder(
-    d_model=model_dim,
-    d_hidden=model_dim * 8,  # Larger expansion factor
-    sparsity_coef=5e-3       # Stronger sparsity
-)
-```
+Additional resources:
+- [Quick Start Guide](docs/QUICKSTART.md)
+- [Project Summary](docs/PROJECT_SUMMARY.md)
+- [VS Code Setup](README_VSCODE.md)
 
 ## Performance Notes
 
-- **GPU Required**: Circuit discovery requires significant computation
-- **Memory**: Gemma 2B needs ~10GB GPU memory
-- **Time**: Full pipeline takes 30-60 minutes on A100 GPU
-- **CPU Fallback**: Supported but 10-20x slower
-
-## Limitations
-
-- Currently supports Gemma 2B (can be adapted for other models)
-- Requires labeled factual prompt pairs
-- SAE training requires substantial compute
-- Attribution methods are approximate
-
-## Research Applications
-
-This codebase enables:
-- **Mechanistic Interpretability**: Understanding how LLMs store factual knowledge
-- **Model Editing**: Targeted modification of factual knowledge
-- **Fact-Checking**: Identifying circuits responsible for specific facts
-- **Safety Research**: Understanding and controlling model behavior
-
-## Citation
-
-If you use this code in your research, please cite:
-
-```bibtex
-@software{factual_recall_circuits,
-  title={Factual Recall Circuits in Gemma 2B},
-  author={Your Name},
-  year={2025},
-  url={https://github.com/yourusername/factual-recall-circuits}
-}
-```
-
-## Related Work
-
-- [Anthropic's Circuit Discovery](https://transformer-circuits.pub/)
-- [Neuropedia](https://neuropedia.ai/)
-- [Sparse Autoencoders for Mechanistic Interpretability](https://arxiv.org/abs/2309.08600)
-- [Attribution Patching](https://arxiv.org/abs/2310.10348)
-
-## Contributing
-
-Contributions welcome! Areas for improvement:
-- Support for additional models (Llama, GPT, etc.)
-- More sophisticated attribution methods
-- Better SAE architectures
-- Expanded fact type coverage
-- Performance optimizations
+- GPU recommended for reasonable performance (30-60 minutes on A100)
+- CPU execution supported but significantly slower (several hours)
+- Memory requirements: ~10GB GPU RAM for Gemma 2B
+- First run downloads model weights (~5GB, cached for future use)
 
 ## License
 
-MIT License - feel free to use and modify!
+This project is released under the MIT license. See [LICENSE](LICENSE) for additional details.
 
-## Troubleshooting
+## Citing
 
-### Out of Memory Error
-```python
-# Reduce batch size or use smaller expansion factor
-sae = SparseAutoencoder(d_model, d_model * 2)  # Instead of 4x
+If you use this project in your research, please cite:
+
+```bibtex
+@software{factual_recall_circuits2025,
+  title={Factual Recall Circuits in Gemma 2B},
+  author={Samuel Wang},
+  year={2025},
+  url={https://github.com/samjiawng/factual-recall-circuits}
+}
 ```
 
-### Slow Execution
-```python
-# Reduce number of prompts or layers analyzed
-circuits = discovery.discover_all_circuits(
-    dataset, 
-    train_sae=False  # Skip SAE training
-)
-```
+## Contributing
 
-### Import Errors
-```bash
-# Reinstall dependencies
-pip install -r requirements.txt --upgrade
-```
+Contributions are welcome! Areas for improvement include:
+- Support for additional model architectures
+- Enhanced attribution methods
+- Improved sparse autoencoder architectures
+- Extended fact type coverage
+- Performance optimizations
 
-## Contact
-
-For questions or issues, please open a GitHub issue or contact [your email].
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Acknowledgments
 
-- Google Research for Gemma models
-- Anthropic for circuit discovery methodology
-- HuggingFace for model infrastructure
-- The mechanistic interpretability community
+This work builds on:
+- Anthropic's circuit discovery methodology
+- Neuropedia attribution techniques
+- Sparse autoencoder interpretability research
 
----
+## References
 
-**Happy circuit hunting! 🔍🧠**
+- [Mechanistic Interpretability](https://transformer-circuits.pub/)
+- [Neuropedia](https://neuropedia.ai/)
+- [Sparse Autoencoders for Interpretability](https://arxiv.org/abs/2309.08600)
+- [Attribution Patching](https://arxiv.org/abs/2310.10348)
