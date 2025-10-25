@@ -1,36 +1,24 @@
-"""
-Main script demonstrating the full circuit discovery and testing pipeline
-Run this to discover factual recall circuits in Gemma 2B
-"""
-
 import sys
 from pathlib import Path
 
-# Add src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
 import torch
 import json
 from datetime import datetime
 
-# Now import from src
-from circuit_discovery import CircuitDiscovery, Circuit
+from circuit_discovery import CircuitDiscovery
 from testing_pipeline import CircuitTester, FeatureHypothesis
 from utils import (
     visualize_circuit, 
     compare_circuits, 
     export_circuit_summary,
-    plot_testing_results,
     plot_circuit_overlap
 )
 
 
 def create_factual_dataset():
-    """
-    Create a comprehensive dataset of factual recall prompts
-    """
-    
-    dataset = {
+    return {
         'entity_location': [
             {'clean': 'The Eiffel Tower is located in Paris', 
              'corrupted': 'The Eiffel Tower is located in London'},
@@ -79,17 +67,10 @@ def create_factual_dataset():
              'corrupted': 'Beethoven was a writer'},
         ],
     }
-    
-    return dataset
 
 
-def create_custom_hypotheses():
-    """
-    Create specific hypotheses to test
-    """
-    
-    hypotheses = [
-        # Hypothesis 1: Location detector
+def create_hypotheses():
+    return [
         FeatureHypothesis(
             feature_id=(8, 100),
             hypothesis="Detects geographical location mentions",
@@ -108,7 +89,6 @@ def create_custom_hypotheses():
             expected_activation_threshold=0.4
         ),
         
-        # Hypothesis 2: Capital relation detector
         FeatureHypothesis(
             feature_id=(12, 150),
             hypothesis="Detects 'capital of' relationships",
@@ -127,7 +107,6 @@ def create_custom_hypotheses():
             expected_activation_threshold=0.5
         ),
         
-        # Hypothesis 3: Year/date detector
         FeatureHypothesis(
             feature_id=(10, 200),
             hypothesis="Detects year and date mentions",
@@ -146,7 +125,6 @@ def create_custom_hypotheses():
             expected_activation_threshold=0.45
         ),
         
-        # Hypothesis 4: Famous person detector
         FeatureHypothesis(
             feature_id=(14, 180),
             hypothesis="Detects mentions of famous historical figures",
@@ -165,106 +143,11 @@ def create_custom_hypotheses():
             expected_activation_threshold=0.5
         ),
     ]
-    
-    return hypotheses
 
 
-def main():
-    """
-    Main pipeline for circuit discovery and validation
-    """
+def export_results(circuits, validation_results, dataset, run_dir, device):
+    export_circuit_summary(circuits, str(run_dir / "circuit_summary.txt"))
     
-    print("=" * 80)
-    print("FACTUAL RECALL CIRCUIT DISCOVERY IN GEMMA 2B")
-    print("=" * 80)
-    print()
-    
-    # Setup
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    print(f"Using device: {device}")
-    
-    if device == 'cpu':
-        print("\nWARNING: Running on CPU. This will be slow.")
-        print("For faster execution, use a GPU with CUDA support.\n")
-    
-    output_dir = Path('./outputs')
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = output_dir / f"circuit_discovery_{timestamp}"
-    run_dir.mkdir(exist_ok=True)
-    
-    print(f"Output directory: {run_dir}\n")
-    
-    # Step 1: Initialize discovery system
-    print("Step 1: Initializing circuit discovery system...")
-    discovery = CircuitDiscovery(device=device)
-    print("✓ Initialization complete\n")
-    
-    # Step 2: Load dataset
-    print("Step 2: Loading factual recall dataset...")
-    dataset = create_factual_dataset()
-    total_prompts = sum(len(prompts) for prompts in dataset.values())
-    print(f"✓ Loaded {len(dataset)} fact types with {total_prompts} total prompts\n")
-    
-    # Step 3: Discover circuits
-    print("Step 3: Discovering circuits...")
-    print("This may take several minutes...\n")
-    
-    circuits = discovery.discover_all_circuits(
-        dataset, 
-        train_sae=True
-    )
-    
-    print(f"\n✓ Discovered {len(circuits)} circuits\n")
-    
-    # Step 4: Visualize circuits
-    print("Step 4: Visualizing circuits...")
-    for i, circuit in enumerate(circuits):
-        viz_path = run_dir / f"circuit_{i}_{circuit.name}.png"
-        visualize_circuit(circuit, save_path=str(viz_path))
-    
-    # Create comparison plot
-    comp_path = run_dir / "circuit_comparison.png"
-    compare_circuits(circuits, save_path=str(comp_path))
-    
-    # Create overlap plot
-    overlap_path = run_dir / "circuit_overlap.png"
-    plot_circuit_overlap(circuits, save_path=str(overlap_path))
-    
-    print("✓ Visualizations created\n")
-    
-    # Step 5: Run testing pipeline
-    print("Step 5: Running automated testing pipeline...")
-    tester = CircuitTester(discovery)
-    
-    validation_results = tester.run_full_validation(
-        circuits=circuits,
-        test_dataset=dataset,
-        output_dir=str(run_dir)
-    )
-    
-    print("✓ Testing complete\n")
-    
-    # Step 6: Test custom hypotheses
-    print("Step 6: Testing custom hypotheses...")
-    custom_hypotheses = create_custom_hypotheses()
-    
-    for hyp in custom_hypotheses:
-        print(f"\nTesting: {hyp.hypothesis}")
-        try:
-            result = tester.validator.test_hypothesis(hyp, verbose=True)
-        except Exception as e:
-            print(f"  Skipped: {str(e)}")
-    
-    # Step 7: Export results
-    print("\nStep 7: Exporting results...")
-    
-    # Export circuit summary
-    summary_path = run_dir / "circuit_summary.txt"
-    export_circuit_summary(circuits, str(summary_path))
-    
-    # Export circuits as JSON
     circuits_json = []
     for circuit in circuits:
         circuits_json.append({
@@ -282,57 +165,84 @@ def main():
     with open(run_dir / "circuits.json", 'w') as f:
         json.dump(circuits_json, f, indent=2)
     
-    # Create final report
-    report_path = run_dir / "REPORT.md"
-    with open(report_path, 'w') as f:
+    total_prompts = sum(len(prompts) for prompts in dataset.values())
+    
+    with open(run_dir / "REPORT.md", 'w') as f:
         f.write("# Factual Recall Circuit Discovery Report\n\n")
         f.write(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-        f.write(f"**Model:** Gemma 2B\n\n")
+        f.write(f"**Model:** Gemma 2B\n")
         f.write(f"**Device:** {device}\n\n")
         
         f.write("## Summary\n\n")
-        f.write(f"- **Circuits Discovered:** {len(circuits)}\n")
-        f.write(f"- **Fact Types:** {', '.join(dataset.keys())}\n")
-        f.write(f"- **Total Prompts Tested:** {total_prompts}\n\n")
+        f.write(f"Circuits discovered: {len(circuits)}\n")
+        f.write(f"Fact types: {', '.join(dataset.keys())}\n")
+        f.write(f"Total prompts: {total_prompts}\n\n")
         
-        f.write("## Discovered Circuits\n\n")
-        for i, circuit in enumerate(circuits, 1):
-            f.write(f"### {i}. {circuit.name}\n\n")
-            f.write(f"- **Fact Type:** {circuit.fact_type}\n")
-            f.write(f"- **Nodes:** {len(circuit.nodes)}\n")
-            f.write(f"- **Edges:** {len(circuit.edges)}\n")
-            f.write(f"- **Attribution Score:** {circuit.attribution_score:.4f}\n\n")
+        f.write("## Circuits\n\n")
+        for circuit in circuits:
+            f.write(f"### {circuit.name}\n\n")
+            f.write(f"- Fact type: {circuit.fact_type}\n")
+            f.write(f"- Nodes: {len(circuit.nodes)}\n")
+            f.write(f"- Edges: {len(circuit.edges)}\n")
+            f.write(f"- Attribution score: {circuit.attribution_score:.4f}\n\n")
         
-        f.write("## Validation Results\n\n")
+        f.write("## Validation\n\n")
         for result in validation_results['circuit_results']:
             f.write(f"### {result['name']}\n\n")
-            f.write(f"- **Hypothesis Pass Rate:** {result['hypothesis_pass_rate']:.1%}\n")
-            f.write(f"- **Average Precision:** {result['avg_precision']:.1%}\n")
-            f.write(f"- **Average Specificity:** {result['avg_specificity']:.1%}\n")
-            f.write(f"- **Faithfulness Score:** {result['faithfulness']['completeness_score']:.3f}\n\n")
-        
-        f.write("## Files Generated\n\n")
-        f.write("- `circuit_summary.txt` - Detailed circuit information\n")
-        f.write("- `circuits.json` - Machine-readable circuit data\n")
-        f.write("- `circuit_*.png` - Individual circuit visualizations\n")
-        f.write("- `circuit_comparison.png` - Comparison across circuits\n")
-        f.write("- `circuit_overlap.png` - Circuit overlap analysis\n")
-        f.write("- `*_results.csv` - Hypothesis testing results\n")
-        f.write("- `validation_summary.json` - Complete validation data\n")
+            f.write(f"- Hypothesis pass rate: {result['hypothesis_pass_rate']:.1%}\n")
+            f.write(f"- Precision: {result['avg_precision']:.1%}\n")
+            f.write(f"- Specificity: {result['avg_specificity']:.1%}\n")
+            f.write(f"- Faithfulness: {result['faithfulness']['completeness_score']:.3f}\n\n")
+
+
+def main():
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    print(f"✓ Results exported to {run_dir}\n")
+    output_dir = Path('./outputs')
+    output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Summary
-    print("=" * 80)
-    print("PIPELINE COMPLETE!")
-    print("=" * 80)
-    print(f"\nDiscovered {len(circuits)} circuits for factual recall in Gemma 2B:")
-    for circuit in circuits:
-        print(f"  • {circuit.name}: {len(circuit.nodes)} nodes, "
-              f"attribution score = {circuit.attribution_score:.3f}")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    run_dir = output_dir / f"circuit_discovery_{timestamp}"
+    run_dir.mkdir(exist_ok=True)
     
-    print(f"\nAll results saved to: {run_dir}")
-    print("\nView the REPORT.md file for a complete summary!")
+    print(f"Device: {device}")
+    print(f"Output: {run_dir}\n")
+    
+    discovery = CircuitDiscovery(device=device)
+    dataset = create_factual_dataset()
+    
+    print("Discovering circuits...")
+    circuits = discovery.discover_all_circuits(dataset, train_sae=True)
+    print(f"Discovered {len(circuits)} circuits\n")
+    
+    print("Generating visualizations...")
+    for i, circuit in enumerate(circuits):
+        viz_path = run_dir / f"circuit_{i}_{circuit.name}.png"
+        visualize_circuit(circuit, save_path=str(viz_path))
+    
+    compare_circuits(circuits, save_path=str(run_dir / "circuit_comparison.png"))
+    plot_circuit_overlap(circuits, save_path=str(run_dir / "circuit_overlap.png"))
+    
+    print("Running validation...")
+    tester = CircuitTester(discovery)
+    validation_results = tester.run_full_validation(
+        circuits=circuits,
+        test_dataset=dataset,
+        output_dir=str(run_dir)
+    )
+    
+    print("Testing hypotheses...")
+    hypotheses = create_hypotheses()
+    for hyp in hypotheses:
+        try:
+            tester.validator.test_hypothesis(hyp, verbose=False)
+        except Exception:
+            pass
+    
+    print("Exporting results...")
+    export_results(circuits, validation_results, dataset, run_dir, device)
+    
+    print(f"\nResults saved to {run_dir}")
     
     return circuits, validation_results
 

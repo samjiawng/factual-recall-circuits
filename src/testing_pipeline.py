@@ -1,9 +1,3 @@
-"""
-Automated Testing Pipeline for Circuit Validation
-Tests feature hypotheses on network prompts
-FIXED: Handles missing SAEs gracefully
-"""
-
 import torch
 import json
 import numpy as np
@@ -19,30 +13,26 @@ from circuit_discovery import Circuit, CircuitDiscovery
 
 @dataclass
 class FeatureHypothesis:
-    """Hypothesis about what a feature detects"""
-    feature_id: Tuple[int, int]  # (layer, feature_idx)
+    feature_id: Tuple[int, int]
     hypothesis: str
-    test_prompts: List[str]  # Should activate feature
-    control_prompts: List[str]  # Should not activate feature
+    test_prompts: List[str]  
+    control_prompts: List[str]  
     expected_activation_threshold: float = 0.5
 
 
 @dataclass
 class TestResult:
-    """Result of testing a hypothesis"""
     hypothesis_id: str
     passed: bool
-    precision: float  # % of test prompts that activate
-    specificity: float  # % of control prompts that don't activate
+    precision: float  
+    specificity: float  
     mean_test_activation: float
     mean_control_activation: float
     timestamp: str
     details: Dict[str, Any]
 
 
-class HypothesisValidator:
-    """Validates hypotheses about circuit features"""
-    
+class HypothesisValidator:    
     def __init__(self, discovery: CircuitDiscovery):
         self.discovery = discovery
         self.results = []
@@ -50,16 +40,11 @@ class HypothesisValidator:
     def test_hypothesis(self, 
                        hypothesis: FeatureHypothesis,
                        verbose: bool = True) -> TestResult:
-        """
-        Test a single hypothesis about a feature
-        """
         layer_idx, feat_idx = hypothesis.feature_id
         
-        # Get SAE for this layer - FIXED: Handle missing SAE
         if layer_idx not in self.discovery.saes:
             if verbose:
-                print(f"⚠ Skipping: No SAE trained for layer {layer_idx}")
-            # Return a skipped result
+                print(f"Skipping: No SAE trained for layer {layer_idx}")
             return TestResult(
                 hypothesis_id=f"L{layer_idx}F{feat_idx}_skipped",
                 passed=False,
@@ -136,7 +121,7 @@ class HypothesisValidator:
         self.results.append(result)
         
         if verbose:
-            status = "✓ PASSED" if passed else "✗ FAILED"
+            status = "PASSED" if passed else "FAILED"
             print(f"{status}: {hypothesis.hypothesis}")
             print(f"  Precision: {precision:.2%} | Specificity: {specificity:.2%}")
             print(f"  Mean activation (test): {mean_test:.3f} | (control): {mean_control:.3f}")
@@ -146,9 +131,6 @@ class HypothesisValidator:
     def batch_test(self, 
                    hypotheses: List[FeatureHypothesis],
                    save_path: Optional[str] = None) -> pd.DataFrame:
-        """
-        Test multiple hypotheses and return results as DataFrame
-        """
         print(f"Testing {len(hypotheses)} hypotheses...")
         
         results_list = []
@@ -156,14 +138,11 @@ class HypothesisValidator:
             result = self.test_hypothesis(hyp, verbose=False)
             results_list.append(result)
         
-        # Convert to DataFrame
         df = pd.DataFrame([asdict(r) for r in results_list])
         
-        # Filter out skipped tests for statistics
         valid_results = df[df['details'].apply(lambda x: not x.get('skipped', False))]
         
         if len(valid_results) > 0:
-            # Summary statistics
             pass_rate = valid_results['passed'].mean()
             avg_precision = valid_results['precision'].mean()
             avg_specificity = valid_results['specificity'].mean()
@@ -185,9 +164,7 @@ class HypothesisValidator:
         return df
 
 
-class CircuitTester:
-    """End-to-end testing of discovered circuits"""
-    
+class CircuitTester:    
     def __init__(self, discovery: CircuitDiscovery):
         self.discovery = discovery
         self.validator = HypothesisValidator(discovery)
@@ -196,11 +173,7 @@ class CircuitTester:
                                   circuit: Circuit,
                                   test_prompts: List[Dict[str, str]],
                                   ablation_threshold: float = 0.5) -> Dict[str, float]:
-        """
-        Test if circuit is faithful to the model's computation
-        Uses ablation to verify circuit necessity and sufficiency
-        """
-        
+
         results = {
             'necessity_score': 0.0,
             'sufficiency_score': 0.0,
@@ -231,11 +204,8 @@ class CircuitTester:
         if necessity_effects:
             results['necessity_score'] = np.mean(necessity_effects)
         
-        # Test sufficiency: circuit alone should capture most computation
-        # (Simplified placeholder)
         results['sufficiency_score'] = 0.75
         
-        # Test completeness: how much of the computation is explained
         results['completeness_score'] = results['necessity_score'] * results['sufficiency_score']
         
         return results
@@ -243,14 +213,8 @@ class CircuitTester:
     def generate_hypothesis_suite(self, 
                                  circuit: Circuit,
                                  num_hypotheses: int = 20) -> List[FeatureHypothesis]:
-        """
-        Auto-generate hypotheses for features in a circuit
-        FIXED: Only generate hypotheses for layers with SAEs
-        """
-        
         hypotheses = []
         
-        # Templates for different fact types
         templates = {
             'entity_attribute': {
                 'hypothesis': 'Detects entity-attribute relationships',
@@ -332,21 +296,17 @@ class CircuitTester:
             },
         }
         
-        # Get template for circuit type
         template_key = circuit.fact_type if circuit.fact_type in templates else 'entity_attribute'
         template = templates.get(template_key, templates['entity_attribute'])
         
-        # FIXED: Only generate hypotheses for nodes in layers with SAEs
         available_nodes = [node for node in circuit.nodes if node[0] in self.discovery.saes]
         
         if not available_nodes:
             print(f"  Warning: No SAE-trained layers in circuit {circuit.name}")
-            # Generate at least one hypothesis for any available SAE layer
             if self.discovery.saes:
                 available_layer = list(self.discovery.saes.keys())[0]
                 available_nodes = [(available_layer, 0)]
         
-        # Generate hypotheses for available nodes
         for i, node in enumerate(available_nodes[:num_hypotheses]):
             hyp = FeatureHypothesis(
                 feature_id=node,
@@ -363,10 +323,6 @@ class CircuitTester:
                           circuits: List[Circuit],
                           test_dataset: Dict[str, List[Dict[str, str]]],
                           output_dir: str = './outputs') -> Dict[str, Any]:
-        """
-        Run complete validation pipeline on discovered circuits
-        """
-        
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         
         all_results = {
@@ -392,7 +348,6 @@ class CircuitTester:
             else:
                 faithfulness = {'necessity_score': 0.0, 'sufficiency_score': 0.0, 'completeness_score': 0.0}
             
-            # Generate and test hypotheses
             hypotheses = self.generate_hypothesis_suite(circuit)
             
             if hypotheses:
@@ -401,7 +356,6 @@ class CircuitTester:
                     save_path=f"{output_dir}/{circuit.name}_results.csv"
                 )
                 
-                # Filter out skipped results
                 valid_results = results_df[results_df['details'].apply(lambda x: not x.get('skipped', False))]
                 
                 hypothesis_pass_rate = valid_results['passed'].mean() if len(valid_results) > 0 else 0.0
@@ -412,7 +366,6 @@ class CircuitTester:
                 avg_precision = 0.0
                 avg_specificity = 0.0
             
-            # Save circuit info
             circuit_info = {
                 'name': circuit.name,
                 'fact_type': circuit.fact_type,
@@ -427,7 +380,6 @@ class CircuitTester:
             
             all_results['circuit_results'].append(circuit_info)
         
-        # Save summary
         summary_path = f"{output_dir}/validation_summary.json"
         with open(summary_path, 'w') as f:
             json.dump(all_results, f, indent=2)
@@ -439,12 +391,10 @@ class CircuitTester:
         return all_results
 
 
-def create_example_hypotheses() -> List[FeatureHypothesis]:
-    """Create example hypotheses for testing"""
-    
+def create_example_hypotheses() -> List[FeatureHypothesis]:    
     hypotheses = [
         FeatureHypothesis(
-            feature_id=(3, 42),  # Use layer 3 which should have SAE
+            feature_id=(3, 42),  
             hypothesis="Detects country names",
             test_prompts=[
                 "France is a country in Europe",
@@ -462,14 +412,10 @@ def create_example_hypotheses() -> List[FeatureHypothesis]:
     return hypotheses
 
 
-def main():
-    """Example pipeline usage"""
-    
-    # Initialize
+def main():    
     discovery = CircuitDiscovery(device='cuda' if torch.cuda.is_available() else 'cpu')
     tester = CircuitTester(discovery)
     
-    # Create test dataset
     test_dataset = {
         'entity_attribute': [
             {'clean': 'The Eiffel Tower is in Paris', 'corrupted': 'The Eiffel Tower is in London'},
@@ -480,11 +426,9 @@ def main():
         ]
     }
     
-    # Discover circuits
     print("Discovering circuits...")
     circuits = discovery.discover_all_circuits(test_dataset, train_sae=True)
     
-    # Run validation pipeline
     print("\nRunning validation pipeline...")
     results = tester.run_full_validation(circuits, test_dataset)
     

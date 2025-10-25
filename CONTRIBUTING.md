@@ -1,58 +1,31 @@
-# Contributing to Factual Recall Circuits
+# Contributing
 
-Thank you for your interest in contributing to this project. This document provides guidelines for contributing code, documentation, and other improvements.
-
-## Getting Started
-
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/yourusername/factual-recall-circuits.git`
-3. Create a branch: `git checkout -b feature/your-feature-name`
-4. Make your changes
-5. Run tests and verify functionality
-6. Commit with clear messages
-7. Push to your fork
-8. Open a pull request
-
-## Development Setup
+## Setup
 
 ```bash
-# Clone repository
 git clone https://github.com/yourusername/factual-recall-circuits.git
 cd factual-recall-circuits
-
-# Create virtual environment
 python3.11 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Install development dependencies
 pip install pytest black flake8 mypy
 ```
 
+## Workflow
+
+1. Fork the repository
+2. Create a branch: `git checkout -b feature/your-feature`
+3. Make changes
+4. Run tests: `pytest tests/`
+5. Format code: `black src/ main.py`
+6. Commit and push
+7. Open pull request
+
 ## Code Standards
 
-### Style Guide
+**Style**: PEP 8, 88 character line length
 
-This project follows PEP 8 style guidelines with the following specifications:
-- Line length: 88 characters (Black formatter default)
-- Indentation: 4 spaces
-- Imports: Organized using isort
-- Docstrings: NumPy style
-
-### Formatting
-
-Code should be formatted using Black:
-
-```bash
-black src/ main.py
-```
-
-### Type Hints
-
-Use type hints for all function signatures:
-
+**Type hints required**:
 ```python
 def discover_circuit(
     self,
@@ -60,134 +33,75 @@ def discover_circuit(
     fact_type: str,
     threshold: float = 0.01
 ) -> Circuit:
-    """Function implementation"""
+    pass
 ```
 
-### Documentation
-
-All public functions and classes must include docstrings:
-
+**Docstrings required** (NumPy style):
 ```python
 def method_name(param1: Type1, param2: Type2) -> ReturnType:
     """
-    Brief description of method.
+    Brief description.
     
     Parameters
     ----------
     param1 : Type1
-        Description of param1
+        Description
     param2 : Type2
-        Description of param2
+        Description
     
     Returns
     -------
     ReturnType
-        Description of return value
-    
-    Examples
-    --------
-    >>> result = method_name(arg1, arg2)
+        Description
     """
 ```
 
 ## Testing
 
-### Running Tests
-
 ```bash
-# Run all tests
 pytest tests/
-
-# Run specific test file
-pytest tests/test_circuit_discovery.py
-
-# Run with coverage
 pytest --cov=src tests/
 ```
 
-### Writing Tests
-
-Tests should be placed in the `tests/` directory with names matching `test_*.py`:
-
+Place tests in `tests/` directory with `test_*.py` naming:
 ```python
-import pytest
-from circuit_discovery import CircuitDiscovery
-
 def test_circuit_discovery_initialization():
-    """Test that CircuitDiscovery initializes correctly."""
     discovery = CircuitDiscovery(model_name="gpt2", device="cpu")
     assert discovery.model is not None
-    assert discovery.tokenizer is not None
 ```
 
-## Pull Request Process
+## Pull Requests
 
-1. Update documentation for any changed functionality
-2. Add tests for new features
-3. Ensure all tests pass
-4. Update CHANGELOG.md with notable changes
-5. Reference any related issues in the PR description
+**Requirements**:
+- All tests pass
+- Code formatted with Black
+- Documentation updated
+- One feature per PR
+- Clear commit messages
 
-### PR Guidelines
+**Process**:
+1. Automated checks pass
+2. Maintainer approval
+3. Address feedback
+4. Merge
 
-- One feature or fix per pull request
-- Clear, descriptive commit messages
-- Link to related issues
-- Include motivation and context
-- Update relevant documentation
+## Issues
 
-## Areas for Contribution
+Include:
+- Clear description
+- Reproduction steps (bugs)
+- Expected vs actual behavior
+- Environment (Python version, OS, hardware)
+- Error messages or code snippets
 
-### High Priority
+## Priority Areas
 
-- Additional model architecture support (Llama, Mistral, etc.)
-- Performance optimizations for CPU execution
-- Enhanced visualization capabilities
-- Expanded test coverage
+**High**: Additional model support, performance optimization, test coverage
 
-### Medium Priority
+**Medium**: Alternative attribution methods, improved SAE architectures, batch processing
 
-- Alternative attribution methods
-- Improved SAE architectures
-- Additional fact types
-- Batch processing capabilities
-
-### Documentation
-
-- Tutorial expansions
-- Code examples
-- API documentation improvements
-- Usage guides
-
-## Reporting Issues
-
-When reporting bugs or requesting features, please include:
-
-1. Clear description of the issue
-2. Steps to reproduce (for bugs)
-3. Expected vs actual behavior
-4. Environment details (Python version, OS, GPU/CPU)
-5. Relevant code snippets or error messages
-
-Use the GitHub issue tracker and apply appropriate labels.
-
-## Code Review Process
-
-All submissions require review before merging:
-
-1. Automated checks must pass (formatting, tests)
-2. At least one maintainer approval required
-3. Discussion and feedback addressed
-4. Documentation updated as needed
+**Documentation**: Tutorials, examples, API docs
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
-
-## Questions?
-
-Feel free to open an issue for questions or reach out to the maintainers.
-
-## Recognition
-
-Contributors will be acknowledged in the project README and release notes.
+Contributions licensed under MIT License.
